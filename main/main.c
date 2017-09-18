@@ -100,9 +100,8 @@ void i2c_scan() {
 BME data Struct
  */
 typedef struct tempHumiditParameters {
-     float temp;
-     float humidity;
-     float pressure;
+     int temp;
+     int humidity;
  } tempHumidityParameters;
 
 void app_main(){
