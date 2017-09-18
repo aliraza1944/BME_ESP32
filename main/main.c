@@ -116,18 +116,19 @@ void app_main(){
 
   tempHumidityParameters bme280;
 
-  ESP_LOGI("BME", "******   BME STATUS   ******");
-  i2c_bme280_begin();
-  printf("Status after begin %x\n",i2c_bme280_read_register(0xF3));
+  ESP_LOGI("BME", "******   BME DATA   ******");
 
   vTaskDelay(3000 / portTICK_RATE_MS);
 
   while(1){
+    i2c_bme280_begin();
+    vTaskDelay(1500 / portTICK_RATE_MS);
     bme280.temp= (int)i2c_bme280_read_temp();
     float pressure= i2c_bme280_read_pressure();
     bme280.humidity= (int)i2c_bme280_read_rh();
     ESP_LOGI("", "Temp : %d \t Humidity : %d \t Pressure : %.1f", bme280.temp, bme280.humidity, pressure);
-    vTaskDelay(3000 / portTICK_RATE_MS);
+    i2c_bme280_end();
+    vTaskDelay(1500 / portTICK_RATE_MS);
   }
 
 }
