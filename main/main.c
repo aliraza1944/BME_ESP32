@@ -124,10 +124,10 @@ void app_main(){
   vTaskDelay(3000 / portTICK_RATE_MS);
 
   while(1){
-    bme280.temp= i2c_bme280_read_temp();
-    bme280.pressure= i2c_bme280_read_pressure();
-    bme280.humidity= i2c_bme280_read_rh();
-    ESP_LOGI("", "Temp : %.1f \t Humidity : %.1f \t Pressure : %.1f", bme280.temp, bme280.humidity, bme280.pressure);
+    bme280.temp= (int)i2c_bme280_read_temp();
+    float pressure= i2c_bme280_read_pressure();
+    bme280.humidity= (int)i2c_bme280_read_rh();
+    ESP_LOGI("", "Temp : %d \t Humidity : %d \t Pressure : %.1f", bme280.temp, bme280.humidity, pressure);
     vTaskDelay(3000 / portTICK_RATE_MS);
   }
 
