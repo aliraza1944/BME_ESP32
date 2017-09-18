@@ -95,6 +95,16 @@ void i2c_scan() {
    printf("Done scanning.. found %d devices\n",foundCount);
 }
 
+
+/*
+BME data Struct
+ */
+typedef struct tempHumiditParameters {
+     float temp;
+     float humidity;
+     float pressure;
+ } tempHumidityParameters;
+
 void app_main(){
 
   ESP_LOGI("APP", "STARTING.....");
@@ -103,9 +113,21 @@ void app_main(){
   i2c_init();
 
   ESP_LOGI("I2C", "Scanning I2C Devices.");
+  i2c_scan();
+
+  tempHumidityParameters bme280;
+
+  ESP_LOGI("BME", "******   BME STATUS   ******");
+  i2c_bme280_begin();
+  printf("Status after begin %x\n",i2c_bme280_read_register(0xF3));
+
+  vTaskDelay(3000 / portTICK_RATE_MS);
 
   while(1){
-    i2c_scan();
+    bme280.temp= i2c_bme280_read_temp();
+    bme280.pressure= i2c_bme280_read_pressure();
+    bme280.humidity= i2c_bme280_read_rh();
+    ESP_LOGI("", "Temp : %.1f \t Humidity : %.1f \t Pressure : %.1f", bme280.temp, bme280.humidity, bme280.pressure);
     vTaskDelay(3000 / portTICK_RATE_MS);
   }
 
