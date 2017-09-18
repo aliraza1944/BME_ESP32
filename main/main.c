@@ -28,8 +28,8 @@
 I2C Definitions
  */
 
- #define I2C_MASTER_SCL_IO    22    /*!< gpio number for I2C master clock */
- #define I2C_MASTER_SDA_IO    21    /*!< gpio number for I2C master data  */
+ #define I2C_MASTER_SCL_IO    19    /*!< gpio number for I2C master clock */
+ #define I2C_MASTER_SDA_IO    18    /*!< gpio number for I2C master data  */
  #define I2C_MASTER_NUM   I2C_NUM_0   /*!< I2C port number for master dev */
  #define I2C_MASTER_TX_BUF_DISABLE   0   /*!< I2C master do not need buffer */
  #define I2C_MASTER_RX_BUF_DISABLE   0   /*!< I2C master do not need buffer */
@@ -97,16 +97,18 @@ void i2c_scan() {
 
 void app_main(){
 
-  ESP_LOGI("STARTING.....");
-  ESP_LOGI("Initialising I2C Bus.");
+  ESP_LOGI("APP", "STARTING.....");
+  ESP_LOGI("I2C", "Initialising I2C Bus.");
 
-  i2c.init();
+  i2c_init();
 
-  ESP_LOGI("Scanning I2C Devices.");
+  ESP_LOGI("I2C", "Scanning I2C Devices.");
 
-  i2c_scan();
+  while(1){
+    i2c_scan();
+    vTaskDelay(3000 / portTICK_RATE_MS);
+  }
 
-  
 }
 
 #if 0
