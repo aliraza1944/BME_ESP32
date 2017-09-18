@@ -106,20 +106,30 @@ typedef struct tempHumiditParameters {
 
 void app_main(){
 
+  gpio_config_t io_conf;
+	io_conf.intr_type = GPIO_PIN_INTR_DISABLE;
+	io_conf.pin_bit_mask = 1ULL << 22;
+	io_conf.mode = GPIO_MODE_OUTPUT;
+	io_conf.pull_down_en = 0;
+	io_conf.pull_up_en = 0;
+	gpio_config(&io_conf);
+
+  gpio_set_level(GPIO_NUM_22, 0);
+
+
   ESP_LOGI("APP", "STARTING.....");
   ESP_LOGI("I2C", "Initialising I2C Bus.");
 
   i2c_init();
 
   ESP_LOGI("I2C", "Scanning I2C Devices.");
-  i2c_scan();
-
+  while(1){
+    i2c_scan();
+    vTaskDelay(1000/portTICK_RATE_MS);
+  }
   tempHumidityParameters bme280;
 
-  ESP_LOGI("BME", "******   BME DATA   ******");
-
-  vTaskDelay(3000 / portTICK_RATE_MS);
-
+  #if 0
   while(1){
     i2c_bme280_begin();
     vTaskDelay(1500 / portTICK_RATE_MS);
@@ -130,6 +140,7 @@ void app_main(){
     i2c_bme280_end();
     vTaskDelay(1500 / portTICK_RATE_MS);
   }
+  #endif
 
 }
 
