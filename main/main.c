@@ -84,7 +84,7 @@ void i2c_scan() {
 	int address;
    int ret;
 	int foundCount = 0;
-	for (address=1; address<254; address++) {
+	for (address=0x00; address< 0xFF; address++) {
        ret=i2c_master_check_slave(I2C_MASTER_NUM,address);
        if (ret == ESP_OK) {
            printf("Found device addres: %02x\n", address);
