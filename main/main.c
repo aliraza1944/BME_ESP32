@@ -120,7 +120,7 @@ void app_main(){
 	gpio_config(&io_conf);
 
   gpio_set_level(GPIO_NUM_22, 0);
-  gpio_set_level(GPIO_NUM_23, 1);
+  gpio_set_level(GPIO_NUM_23, 0);
 
 
   ESP_LOGI("APP", "STARTING.....");
