@@ -32,7 +32,7 @@ I2C Definitions
  #define I2C_MASTER_NUM   I2C_NUM_0   /*!< I2C port number for master dev */
  #define I2C_MASTER_TX_BUF_DISABLE   0   /*!< I2C master do not need buffer */
  #define I2C_MASTER_RX_BUF_DISABLE   0   /*!< I2C master do not need buffer */
- #define I2C_MASTER_FREQ_HZ    100000     /*!< I2C master clock frequency */
+ #define I2C_MASTER_FREQ_HZ    400000     /*!< I2C master clock frequency */
 
  #define WRITE_BIT  I2C_MASTER_WRITE /*!< I2C master write */
  #define READ_BIT   I2C_MASTER_READ  /*!< I2C master read */
@@ -84,7 +84,7 @@ void i2c_scan() {
 	int address;
    int ret;
 	int foundCount = 0;
-	for (address=0x00; address< 0xFF; address++) {
+	for (address=0x01; address< 0xBB; address++) {
        ret=i2c_master_check_slave(I2C_MASTER_NUM,address);
        if (ret == ESP_OK) {
            printf("Found device addres: %02x\n", address);
@@ -111,7 +111,7 @@ void app_main(){
 	io_conf.mode = GPIO_MODE_OUTPUT;
 	io_conf.pull_down_en = 0;
 	io_conf.pull_up_en = 0;
-	
+
 	io_conf.intr_type = GPIO_PIN_INTR_DISABLE;
 	io_conf.pin_bit_mask = 1ULL << 23;
 	io_conf.mode = GPIO_MODE_OUTPUT;
