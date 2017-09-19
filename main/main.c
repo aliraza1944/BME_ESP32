@@ -29,7 +29,7 @@ I2C Definitions
 
  #define I2C_MASTER_SCL_IO    19    /*!< gpio number for I2C master clock */
  #define I2C_MASTER_SDA_IO    18    /*!< gpio number for I2C master data  */
- #define I2C_MASTER_NUM   I2C_NUM_0   /*!< I2C port number for master dev */
+ #define I2C_MASTER_NUM   I2C_NUM_1   /*!< I2C port number for master dev */
  #define I2C_MASTER_TX_BUF_DISABLE   0   /*!< I2C master do not need buffer */
  #define I2C_MASTER_RX_BUF_DISABLE   0   /*!< I2C master do not need buffer */
  #define I2C_MASTER_FREQ_HZ    400000     /*!< I2C master clock frequency */
@@ -121,8 +121,8 @@ void app_main(){
 	io_conf1.pull_up_en = 0;
 	gpio_config(&io_conf1);
 
-  gpio_set_level(GPIO_NUM_22, 1);
-  gpio_set_level(GPIO_NUM_23, 0);
+  gpio_set_level(GPIO_NUM_22, 0);
+  gpio_set_level(GPIO_NUM_23, 1);
 
 
   ESP_LOGI("APP", "STARTING.....");
@@ -131,13 +131,13 @@ void app_main(){
   i2c_init();
 
   ESP_LOGI("I2C", "Scanning I2C Devices.");
-//  while(1){
+  while(1){
     i2c_scan();
     vTaskDelay(1000/portTICK_RATE_MS);
-  //}
+  }
   tempHumidityParameters bme280;
 
-  #if 1
+  #if 0
   while(1){
     i2c_bme280_begin();
     vTaskDelay(1500 / portTICK_RATE_MS);
