@@ -113,7 +113,7 @@ void app_main(){
 	io_conf.pull_up_en = 0;
 	gpio_config(&io_conf);
 
-  gpio_set_level(GPIO_NUM_22, 0);
+  gpio_set_level(GPIO_NUM_22, 1);
 
 
   ESP_LOGI("APP", "STARTING.....");
