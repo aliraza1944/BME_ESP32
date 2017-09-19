@@ -105,13 +105,15 @@ typedef struct tempHumiditParameters {
 
 void app_main(){
 
-  gpio_config_t io_conf;
+  gpio_config_t io_conf1;
 	io_conf.intr_type = GPIO_PIN_INTR_DISABLE;
 	io_conf.pin_bit_mask = 1ULL << 22;
 	io_conf.mode = GPIO_MODE_OUTPUT;
 	io_conf.pull_down_en = 0;
 	io_conf.pull_up_en = 0;
+  gpio_config(&io_conf1);
 
+  gpio_config_t io_conf;
 	io_conf.intr_type = GPIO_PIN_INTR_DISABLE;
 	io_conf.pin_bit_mask = 1ULL << 23;
 	io_conf.mode = GPIO_MODE_OUTPUT;
@@ -119,7 +121,7 @@ void app_main(){
 	io_conf.pull_up_en = 0;
 	gpio_config(&io_conf);
 
-  gpio_set_level(GPIO_NUM_22, 1);
+  gpio_set_level(GPIO_NUM_22, 0);
   gpio_set_level(GPIO_NUM_23, 1);
 
 
