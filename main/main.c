@@ -32,7 +32,7 @@ I2C Definitions
  #define I2C_MASTER_NUM   I2C_NUM_1   /*!< I2C port number for master dev */
  #define I2C_MASTER_TX_BUF_DISABLE   0   /*!< I2C master do not need buffer */
  #define I2C_MASTER_RX_BUF_DISABLE   0   /*!< I2C master do not need buffer */
- #define I2C_MASTER_FREQ_HZ    10000     /*!< I2C master clock frequency */
+ #define I2C_MASTER_FREQ_HZ    200000     /*!< I2C master clock frequency */
 
  #define WRITE_BIT  I2C_MASTER_WRITE /*!< I2C master write */
  #define READ_BIT   I2C_MASTER_READ  /*!< I2C master read */
