@@ -32,7 +32,7 @@ I2C Definitions
  #define I2C_MASTER_NUM   I2C_NUM_1   /*!< I2C port number for master dev */
  #define I2C_MASTER_TX_BUF_DISABLE   0   /*!< I2C master do not need buffer */
  #define I2C_MASTER_RX_BUF_DISABLE   0   /*!< I2C master do not need buffer */
- #define I2C_MASTER_FREQ_HZ    400000     /*!< I2C master clock frequency */
+ #define I2C_MASTER_FREQ_HZ    100000     /*!< I2C master clock frequency */
 
  #define WRITE_BIT  I2C_MASTER_WRITE /*!< I2C master write */
  #define READ_BIT   I2C_MASTER_READ  /*!< I2C master read */
@@ -40,58 +40,10 @@ I2C Definitions
  #define ACK_CHECK_DIS  0x0     /*!< I2C master will not check ack from slave */
  #define ACK_VAL    0x0         /*!< I2C ack value */
  #define NACK_VAL   0x1         /*!< I2C nack value */
- #define DATA_LENGTH 512
-
-
-
 
 /*
 I2C Functions
  */
-
-
- /**
-  * @brief test function to show buffer
-  */
- static void disp_buf(uint8_t* buf, int len)
- {
-     int i;
-     for (i = 0; i < len; i++) {
-         printf("%02x ", buf[i]);
-         if (( i + 1 ) % 16 == 0) {
-             printf("\n");
-         }
-     }
-     printf("\n");
- }
-
- /**
-  * @brief test code to read esp-i2c-slave
-  *        We need to fill the buffer of esp slave device, then master can read them out.
-  *
-  * _______________________________________________________________________________________
-  * | start | slave_addr + rd_bit +ack | read n-1 bytes + ack | read 1 byte + nack | stop |
-  * --------|--------------------------|----------------------|--------------------|------|
-  *
-  */
- static esp_err_t i2c_example_master_read_slave(i2c_port_t i2c_num, uint8_t* data_rd, size_t size)
- {
-     if (size == 0) {
-         return ESP_OK;
-     }
-     i2c_cmd_handle_t cmd = i2c_cmd_link_create();
-     i2c_master_start(cmd);
-     i2c_master_write_byte(cmd, ( 0x55 << 1 ) | READ_BIT, ACK_CHECK_EN);
-     if (size > 1) {
-         i2c_master_read(cmd, data_rd, size - 1, ACK_VAL);
-     }
-     i2c_master_read_byte(cmd, data_rd + size - 1, NACK_VAL);
-     i2c_master_stop(cmd);
-     esp_err_t ret = i2c_master_cmd_begin(i2c_num, cmd, 1000 / portTICK_RATE_MS);
-     i2c_cmd_link_delete(cmd);
-     return ret;
- }
-
 
 esp_err_t i2c_master_check_slave(i2c_port_t i2c_num,uint8_t addr)
 {
@@ -152,7 +104,6 @@ typedef struct tempHumiditParameters {
 
 void app_main(){
 
-  uint8_t* data_rd = (uint8_t*) malloc(DATA_LENGTH);
   gpio_config_t io_conf;
 	io_conf.intr_type = GPIO_PIN_INTR_DISABLE;
 	io_conf.pin_bit_mask = 1ULL << 22;
@@ -171,22 +122,17 @@ void app_main(){
 
   gpio_set_level(GPIO_NUM_22, 0);
   gpio_set_level(GPIO_NUM_23, 1);
+  vTaskDelay(1000/portTICK_RATE_MS);
 
 
   ESP_LOGI("APP", "STARTING.....");
   ESP_LOGI("I2C", "Initialising I2C Bus.");
 
   i2c_init();
-  size_t d_size = 64;
 
   ESP_LOGI("I2C", "Scanning I2C Devices.");
   while(1){
     i2c_scan();
-    vTaskDelay(1000/portTICK_RATE_MS);
-    i2c_example_master_read_slave(I2C_MASTER_NUM, data_rd, DATA_LENGTH);
-
-    disp_buf(data_rd, d_size);
-
     vTaskDelay(1000/portTICK_RATE_MS);
   }
   tempHumidityParameters bme280;
