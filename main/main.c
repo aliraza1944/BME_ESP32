@@ -131,13 +131,13 @@ void app_main(){
   i2c_init();
 
   ESP_LOGI("I2C", "Scanning I2C Devices.");
-  while(1){
+//  while(1){
     i2c_scan();
     vTaskDelay(1000/portTICK_RATE_MS);
-  }
+  //}
   tempHumidityParameters bme280;
 
-  #if 0
+  #if 1
   while(1){
     i2c_bme280_begin();
     vTaskDelay(1500 / portTICK_RATE_MS);
