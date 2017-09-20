@@ -120,8 +120,8 @@ void app_main(){
 	io_conf1.pull_up_en = 0;
 	gpio_config(&io_conf1);
 
-  gpio_set_level(GPIO_NUM_22, 0);
-  gpio_set_level(GPIO_NUM_23, 1);
+  gpio_set_level(GPIO_NUM_22, 1);
+  gpio_set_level(GPIO_NUM_23, 0);
   vTaskDelay(1000/portTICK_RATE_MS);
 
 
