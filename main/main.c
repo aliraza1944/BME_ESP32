@@ -102,6 +102,13 @@ typedef struct tempHumiditParameters {
      int humidity;
  } tempHumidityParameters;
 
+
+ esp_err_t event_handler(void *ctx, system_event_t *event)
+ {
+     return ESP_OK;
+ }
+
+ 
 void app_main(){
 
   gpio_config_t io_conf;
@@ -130,25 +137,30 @@ void app_main(){
 
   i2c_init();
 
+
+  nvs_flash_init();
+  tcpip_adapter_init();
+  ESP_ERROR_CHECK( esp_event_loop_init(event_handler, NULL) );
+  wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
+  ESP_ERROR_CHECK( esp_wifi_init(&cfg) );
+  ESP_ERROR_CHECK( esp_wifi_set_storage(WIFI_STORAGE_RAM) );
+  ESP_ERROR_CHECK( esp_wifi_set_mode(WIFI_MODE_STA) );
+  wifi_config_t sta_config = {
+      .sta = {
+          .ssid = "netgen",
+          .password = "sadeghfamily",
+          .bssid_set = false
+      }
+  };
+  ESP_ERROR_CHECK( esp_wifi_set_config(WIFI_IF_STA, &sta_config) );
+  ESP_ERROR_CHECK( esp_wifi_start() );
+  ESP_ERROR_CHECK( esp_wifi_connect() );
+
   ESP_LOGI("I2C", "Scanning I2C Devices.");
   while(1){
     i2c_scan();
     vTaskDelay(1000/portTICK_RATE_MS);
   }
-  tempHumidityParameters bme280;
-
-  #if 0
-  while(1){
-    i2c_bme280_begin();
-    vTaskDelay(1500 / portTICK_RATE_MS);
-    bme280.temp= (int)i2c_bme280_read_temp();
-    float pressure= i2c_bme280_read_pressure();
-    bme280.humidity= (int)i2c_bme280_read_rh();
-    ESP_LOGI("", "Temp : %d \t Humidity : %d \t Pressure : %.1f", bme280.temp, bme280.humidity, pressure);
-    i2c_bme280_end();
-    vTaskDelay(1500 / portTICK_RATE_MS);
-  }
-  #endif
 
 }
 
