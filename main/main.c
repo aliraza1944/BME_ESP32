@@ -32,7 +32,7 @@ I2C Definitions
  #define I2C_MASTER_NUM   I2C_NUM_1   /*!< I2C port number for master dev */
  #define I2C_MASTER_TX_BUF_DISABLE   0   /*!< I2C master do not need buffer */
  #define I2C_MASTER_RX_BUF_DISABLE   0   /*!< I2C master do not need buffer */
- #define I2C_MASTER_FREQ_HZ    200000     /*!< I2C master clock frequency */
+ #define I2C_MASTER_FREQ_HZ    100000     /*!< I2C master clock frequency */
 
  #define WRITE_BIT  I2C_MASTER_WRITE /*!< I2C master write */
  #define READ_BIT   I2C_MASTER_READ  /*!< I2C master read */
@@ -108,7 +108,7 @@ typedef struct tempHumiditParameters {
      return ESP_OK;
  }
 
- 
+
 void app_main(){
 
   gpio_config_t io_conf;
@@ -127,8 +127,8 @@ void app_main(){
 	io_conf1.pull_up_en = 0;
 	gpio_config(&io_conf1);
 
-  gpio_set_level(GPIO_NUM_22, 1);
-  gpio_set_level(GPIO_NUM_23, 0);
+  gpio_set_level(GPIO_NUM_22, 0);
+  gpio_set_level(GPIO_NUM_23, 1);
   vTaskDelay(1000/portTICK_RATE_MS);
 
 
