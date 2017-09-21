@@ -22,6 +22,32 @@
 #include "sdkconfig.h"
 #include "driver/i2c.h"
 #include "BME280.h"
+#include "app_flash.h"
+
+#define APP_LOG_EN		1
+
+#if APP_LOG_EN
+#define APP_LOGI(x,...)	ESP_LOGI("",x,##__VA_ARGS__)
+#define APP_LOGD(x,...)	ESP_LOGD("",x,##__VA_ARGS__)
+#define APP_LOGW(x,...)	ESP_LOGW("",x,##__VA_ARGS__)
+#define APP_LOGE(x,...)	ESP_LOGE("",x,##__VA_ARGS__)
+#else
+#define APP_LOGI(x,...)
+#define APP_LOGD(x,...)
+#define APP_LOGW(x,...)
+#define APP_LOGE(x,...)
+#endif
+
+#define WIFI_CONNECTED_BIT		BIT0
+
+
+xSemaphoreHandle s_app_mutex;
+static bool s_wifi_config_started = false;
+//Task handle for http task.
+TaskHandle_t http_server_task_handle = NULL;
+
+char s_device_id[64];
+EventGroupHandle_t s_event_group;
 
 /*
 I2C Definitions
@@ -103,10 +129,239 @@ typedef struct tempHumiditParameters {
  } tempHumidityParameters;
 
 
- esp_err_t event_handler(void *ctx, system_event_t *event)
+
+ void http_server_task(void* arg)
  {
+  APP_LOGI("http_server_task start");
+
+  int server_socket = socket(AF_INET, SOCK_STREAM, 0);
+  if (server_socket < 0)
+  {
+    APP_LOGE("Can't create server socket");
+    vTaskDelete(NULL);
+    return;
+  }
+
+  struct sockaddr_in server_addr;
+  struct sockaddr_in client_addr;
+  uint32_t socklen = sizeof(client_addr);
+
+  server_addr.sin_family = AF_INET;
+  server_addr.sin_port = htons(80);
+  server_addr.sin_addr.s_addr = htonl(INADDR_ANY);
+  if (bind(server_socket, (struct sockaddr*)&server_addr, sizeof(server_addr)) < 0)
+  {
+    APP_LOGE("Bind fail");
+    close(server_socket);
+    vTaskDelete(NULL);
+    return;
+  }
+  if (listen(server_socket, 5) < 0)
+  {
+    APP_LOGE("Listen fail");
+    close(server_socket);
+    vTaskDelete(NULL);
+    return;
+  }
+
+  while (1)
+  {
+    int connect_socket = accept(server_socket, (struct sockaddr*)&client_addr, &socklen);
+    if (connect_socket >= 0)
+    {
+      char buffer[1024], c;
+      int bytes_read = 0;
+      memset(buffer, 0, 1024);
+      while (recv(connect_socket, &c, 1, 0) > 0)
+      {
+        buffer[bytes_read++] = c;
+        if (bytes_read == 1023)
+          break;
+        if (strstr(buffer, "\r\n\r\n"))
+          break;
+      }
+
+      if (strncmp(buffer, "GET ", 4))
+      {
+        close(connect_socket);
+
+        xSemaphoreTake(s_app_mutex, portMAX_DELAY);
+        s_wifi_config_started = false;
+        xSemaphoreGive(s_app_mutex);
+
+        vTaskDelay(200 / portTICK_RATE_MS);
+        continue;
+      }
+
+      xSemaphoreTake(s_app_mutex, portMAX_DELAY);
+      s_wifi_config_started = true;
+      xSemaphoreGive(s_app_mutex);
+
+      char* ptr = strstr(buffer, "/msg?ssid=");
+      if (ptr)
+      {
+        char* ptr2 = strstr(buffer, "&password=");
+        char* ptr3 = strstr(buffer, " HTTP/1.");
+
+        char ssid[64], password[64];
+        memset(ssid, 0, 64);
+        memset(password, 0, 64);
+
+        strncpy(ssid, ptr + 10, (ptr2 - ptr) - 10);
+        strncpy(password, ptr2 + 10, (ptr3 - ptr2) - 10);
+
+        char* response =
+          "HTTP/1.1 200 OK\r\n"
+          "Content-Type: text/html\r\n\r\n"
+          "<!DOCTYPE HTML>\r\n<html>\r\n"
+          "<h1><center>Completed WiFi configuration</center></h1>"
+          "<h1><center>Device is restarting...</center></h1>"
+          "</html>\n";
+        send(connect_socket, response, strlen(response), 0);
+        close(connect_socket);
+
+        if (strlen(ssid) > 0 && strlen(password) > 0)
+          app_flash_save_wifi_info(ssid, password);
+
+        vTaskDelay(1000 / portTICK_RATE_MS);
+
+        close(server_socket);
+        //esp_wifi_deinit();
+        esp_restart();
+      }
+      else
+      {
+        char* response =
+          "HTTP/1.1 200 OK\r\n"
+          "Content-Type: text/html\r\n\r\n"
+          "<!DOCTYPE HTML>\r\n<html>\r\n"
+          "<body>"
+          "<p>"
+          "<center>"
+          "<h1>WiFi Configuration</h1>"
+          "<div>"
+          "</div>"
+          "<form action='msg'><p>SSID:  <input type='text' name='ssid' size=50 autofocus></p>"
+          "<p>Password: <input type='text' name='password' size=50 autofocus></p>"
+          "<p><input type='submit' value='Submit'></p>"
+          "</form>"
+          "</center>"
+          "</body></html>\n";
+        send(connect_socket, response, strlen(response), 0);
+        close(connect_socket);
+      }
+    }
+    vTaskDelay(200 / portTICK_RATE_MS);
+  }
+  close(server_socket);
+  vTaskDelete(NULL);
+ }
+
+
+ static esp_err_t wifi_event_handler(void *ctx, system_event_t *event)
+ {
+ 	static bool ap_started = false;
+     switch(event->event_id) {
+     case SYSTEM_EVENT_AP_START:
+     	//APP_LOGI("SYSTEM_EVENT_AP_START\n");
+     	if (!ap_started)
+     	{
+     		xTaskCreate(&http_server_task, "http_server_task", 4096, NULL, 5, NULL);
+     		ap_started = true;
+     	}
+     	break;
+     case SYSTEM_EVENT_STA_START:
+         esp_wifi_connect();
+         break;
+     case SYSTEM_EVENT_STA_GOT_IP: {
+     	uint8_t mac[6];
+ 		esp_wifi_get_mac(ESP_IF_WIFI_STA, mac);
+ 		sprintf(s_device_id, "%02x:%02x:%02x:%02x:%02x:%02x", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+         xEventGroupSetBits(s_event_group, WIFI_CONNECTED_BIT);
+         break;
+     }
+     case SYSTEM_EVENT_STA_DISCONNECTED:
+         esp_wifi_connect();
+ 				xEventGroupClearBits(s_event_group, WIFI_CONNECTED_BIT);
+         break;
+     default:
+         break;
+     }
      return ESP_OK;
  }
+
+
+ void app_wifi_init()
+{
+	tcpip_adapter_init();
+	s_event_group = xEventGroupCreate();
+	ESP_ERROR_CHECK( esp_event_loop_init(wifi_event_handler, NULL) );
+	wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
+	ESP_ERROR_CHECK(esp_wifi_init(&cfg));
+	ESP_ERROR_CHECK(esp_wifi_set_storage(WIFI_STORAGE_RAM));
+
+	//give unique names to SSID of SCALEAP
+	char wifi_ap_name[32];
+	uint8_t sta_mac[6];
+	esp_wifi_get_mac(ESP_IF_WIFI_STA, sta_mac);
+	sprintf(wifi_ap_name, "Talon%02x%02x%02x",sta_mac[3], sta_mac[4], sta_mac[5]);
+	APP_LOGI("%s", wifi_ap_name);
+
+	wifi_config_t wifi_ap_config = {
+		.ap = {
+			.ssid = "",
+			.ssid_len = 0,
+			.max_connection = 1,
+			.authmode = WIFI_AUTH_OPEN
+		}
+	};
+
+	//copied ssid for AP here,due to type cast error in wifi_ap_config
+	strcpy((char*)wifi_ap_config.ap.ssid, wifi_ap_name);
+
+	char ssid[128] = { 0 }, password[128] = { 0 };
+	if (app_flash_load_wifi_info(ssid, password))
+	{
+		APP_LOGI("Read wifi info from flash, Setting to STA, ssid=%s, pwd=%s", ssid, password);
+		wifi_config_t wifi_sta_config;
+		strcpy((char*)wifi_sta_config.sta.ssid, ssid);
+		strcpy((char*)wifi_sta_config.sta.password, password);
+		ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
+		ESP_ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_STA, &wifi_sta_config));
+		ESP_ERROR_CHECK(esp_wifi_start());
+
+		xEventGroupWaitBits(s_event_group, WIFI_CONNECTED_BIT, false, false, 10000 / portTICK_RATE_MS);
+
+    if (xEventGroupGetBits(s_event_group) & WIFI_CONNECTED_BIT) // WiFi Connection Success
+		{
+			APP_LOGI("WiFi Connection Success, Setting to STA");
+			//ESP_ERROR_CHECK(esp_wifi_stop());
+			//ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_APSTA));
+			ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
+			//ESP_ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_AP, &wifi_ap_config));
+			ESP_ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_STA, &wifi_sta_config));
+			//ESP_ERROR_CHECK(esp_wifi_start());
+		}
+		else // WiFi Connection Fail
+		{
+			APP_LOGI("WiFi Connection Fail, Setting to SoftAP");
+			//ESP_ERROR_CHECK(esp_wifi_stop());
+			esp_wifi_disconnect();
+			ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_AP));
+			ESP_ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_AP, &wifi_ap_config));
+			//ESP_ERROR_CHECK(esp_wifi_start());
+		}
+	}
+	else
+	{
+		//APP_LOGI("Not read wifi info from flash, Setting to Soft AP");
+		ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_AP));
+		ESP_ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_AP, &wifi_ap_config));
+		ESP_ERROR_CHECK(esp_wifi_start());
+	}
+}
+
+
 
 
 void app_main(){
@@ -133,28 +388,11 @@ void app_main(){
 
 
   ESP_LOGI("APP", "STARTING.....");
+  ESP_LOGI("wifi", "STARTING WIFI");
+  app_wifi_init();
   ESP_LOGI("I2C", "Initialising I2C Bus.");
 
   i2c_init();
-
-
-  nvs_flash_init();
-  tcpip_adapter_init();
-  ESP_ERROR_CHECK( esp_event_loop_init(event_handler, NULL) );
-  wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
-  ESP_ERROR_CHECK( esp_wifi_init(&cfg) );
-  ESP_ERROR_CHECK( esp_wifi_set_storage(WIFI_STORAGE_RAM) );
-  ESP_ERROR_CHECK( esp_wifi_set_mode(WIFI_MODE_STA) );
-  wifi_config_t sta_config = {
-      .sta = {
-          .ssid = "netgen",
-          .password = "sadeghfamily",
-          .bssid_set = false
-      }
-  };
-  ESP_ERROR_CHECK( esp_wifi_set_config(WIFI_IF_STA, &sta_config) );
-  ESP_ERROR_CHECK( esp_wifi_start() );
-  ESP_ERROR_CHECK( esp_wifi_connect() );
 
   ESP_LOGI("I2C", "Scanning I2C Devices.");
   while(1){
