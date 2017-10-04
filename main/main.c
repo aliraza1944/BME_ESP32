@@ -24,6 +24,8 @@
 #include "driver/gpio.h"
 #include "sdkconfig.h"
 #include "driver/i2c.h"
+
+#if 0
 #include "app_flash.h"
 
 #define APP_LOG_EN		1
@@ -48,6 +50,7 @@ TaskHandle_t http_server_task_handle = NULL;
 char s_device_id[64];
 EventGroupHandle_t s_event_group;
 
+#endif
 /*
 I2C Definitions
  */
@@ -118,7 +121,7 @@ void i2c_scan() {
    printf("Done scanning.. found %d devices\n",foundCount);
 }
 
-
+#if 0
  void http_server_task(void* arg)
 {
 
@@ -446,7 +449,7 @@ void i2c_scan() {
 	}
 }
 
-
+#endif
 
 
 void app_main(){
@@ -473,19 +476,22 @@ void app_main(){
 
 
   ESP_LOGI("APP", "STARTING.....");
-  ESP_LOGI("wifi", "STARTING WIFI");
-  app_wifi_init();
+//  ESP_LOGI("wifi", "STARTING WIFI");
+//  app_wifi_init();
 
-  xEventGroupWaitBits(s_event_group, WIFI_CONNECTED_BIT, false, true, portMAX_DELAY);
+//  xEventGroupWaitBits(s_event_group, WIFI_CONNECTED_BIT, false, true, portMAX_DELAY);
 
-  while (xEventGroupGetBits(s_event_group) & WIFI_CONNECTED_BIT){
+//  while (xEventGroupGetBits(s_event_group) & WIFI_CONNECTED_BIT){
     ESP_LOGI("I2C", "Initialising I2C Bus.");
 
     i2c_init();
+    vTaskDelay(1000/portTICK_RATE_MS);
 
     ESP_LOGI("I2C", "Scanning I2C Devices.");
-    i2c_scan();
-    vTaskDelay(1000/portTICK_RATE_MS);
-  }
+
+    while(1){
+      i2c_scan();
+      vTaskDelay(1000/portTICK_RATE_MS);
+    }
 
 }
