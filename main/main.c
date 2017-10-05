@@ -57,7 +57,7 @@ I2C Definitions
 
  #define I2C_MASTER_SCL_IO    19    /*!< gpio number for I2C master clock */
  #define I2C_MASTER_SDA_IO    18    /*!< gpio number for I2C master data  */
- #define I2C_MASTER_NUM   I2C_NUM_0   /*!< I2C port number for master dev */
+ #define I2C_MASTER_NUM   I2C_NUM_1   /*!< I2C port number for master dev */
  #define I2C_MASTER_TX_BUF_DISABLE   0   /*!< I2C master do not need buffer */
  #define I2C_MASTER_RX_BUF_DISABLE   0   /*!< I2C master do not need buffer */
  #define I2C_MASTER_FREQ_HZ    100000     /*!< I2C master clock frequency */
@@ -79,7 +79,7 @@ esp_err_t i2c_master_check_slave(i2c_port_t i2c_num,uint8_t addr)
    i2c_master_start(cmd);
    i2c_master_write_byte(cmd, ( addr << 1 ) , ACK_CHECK_EN);
    i2c_master_stop(cmd);
-   esp_err_t ret = i2c_master_cmd_begin(i2c_num, cmd, 100 / portTICK_RATE_MS);
+   esp_err_t ret = i2c_master_cmd_begin(i2c_num, cmd, 1000 / portTICK_RATE_MS);
    i2c_cmd_link_delete(cmd);
    return ret;
 }
